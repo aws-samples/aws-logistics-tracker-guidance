@@ -1,57 +1,55 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import {CfnOutput, Stack, StackProps} from 'aws-cdk-lib';
+import {Construct} from 'constructs';
 import {DataSourceConstruct} from "./dataSourceConstruct";
 import {SageMakerConstruct} from "./sageMakerConstruct";
-import {Bucket} from "aws-cdk-lib/aws-s3";
-import {Role, ServicePrincipal} from "aws-cdk-lib/aws-iam";
+import {CodePipelineConstruct, CodePipelineConstructPropsBase} from "./codePipelineConstruct";
 
-export interface SageMakerConstructsProps {
-  readonly dataManifestBucket: Bucket;
-  readonly sageMakerArtifactBucket: Bucket;
-  readonly sageMakerExecutionRole: Role;
-}
+export type InfrastractureStackProps = CodePipelineConstructPropsBase & StackProps;
 
 export class AcceleratorLogisticsTrackerStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
-    super(scope, id, props);
+    constructor(scope: Construct, id: string, props?: InfrastractureStackProps) {
+        super(scope, id, props);
 
-    const dataSource = new DataSourceConstruct(this, 'DataSource');
+        const dataSource = new DataSourceConstruct(this, 'DataSource');
 
-    const sageMakerReturnItems: SageMakerConstructsProps = new SageMakerConstruct(this, 'SageMakerConstruct', {
-      dataBucket: dataSource.dataBucket,
-    });
+        const sageMaker = new SageMakerConstruct(this, 'SageMakerConstruct', {
+            dataBucket: dataSource.dataBucket,
+        });
 
-    const mlPipelineRole = new Role(this, 'MLPipelineRole', {
-      assumedBy: new ServicePrincipal('codebuild.amazonaws.com'),
-    });
+        const codePipeline = new CodePipelineConstruct(this, 'CodePipeline', {
+            git: {
+                githubConnectionArn: "",
+                githubRepoName: "",
+                githubRepoOwner: ""
+            },
+            projectName: "",
+            repoType: undefined,
+            dataManifestBucket: dataSource.dataManifestBucket,
+            sageMakerArtifactBucket: sageMaker.sagemakerArtifactBucket,
+            sageMakerExecutionRole: sageMaker.sagemakerExecutionRole
+        });
 
-    const mlPipelineProject = new codebuild.PipelineProject(this, 'MLPipeline', {
-      buildSpec: codebuild.BuildSpec.fromSourceFilename('./buildspecs/pipeline.yml'),
-      role: mlPipelineRole,
-      environment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_5_0,
-      },
-    });
+        new CfnOutput(this, 'CodePipelineOutput', {
+            value: codePipeline.pipeline.pipelineName,
+        });
 
-    const mlPipeline = new codepipeline_actions.CodeBuildAction({
-      actionName: 'MLPipeline',
-      project: mlPipelineProject,
-      input: buildOutput,
-      outputs: [pipelineOutput],
-      environmentVariables: {
-        SAGEMAKER_ARTIFACT_BUCKET: {
-          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
-          value: props.sageMakerArtifactBucket.bucketName,
-        },
-        SAGEMAKER_PIPELINE_ROLE_ARN: {
-          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
-          value: props.sageMakerExecutionRole.roleArn,
-        },
-        SAGEMAKER_PROJECT_NAME: {
-          type: codebuild.BuildEnvironmentVariableType.PLAINTEXT,
-          value: props.projectName,
-        },
-      },
-    });
-  }
+        new CfnOutput(this, 'DataBucketOutput', {
+            value: dataSource.dataBucket.bucketName,
+            exportName: 'LogisticsTracker-DataBucket',
+        });
+
+        new CfnOutput(this, 'DataManifestBucketOutput', {
+            value: dataSource.dataManifestBucket.bucketName,
+        });
+
+        new CfnOutput(this, 'SageMakerArtifactBucketOutput', {
+            value: sageMaker.sagemakerArtifactBucket.bucketName,
+            exportName: 'LogisticsTracker-SageMakerArtifactBucket',
+        });
+
+        new CfnOutput(this, 'SageMakerExecutionRoleOutput', {
+            value: sageMaker.sagemakerExecutionRole.roleArn,
+            exportName: 'LogisticsTracker-SageMakerExecutionRole',
+        });
+    }
 }

@@ -1,0 +1,11 @@
+{
+  "projectName": "",
+  "repoType": "",
+  "git": {
+    "githubConnectionArn": "",
+    "githubRepoName": "",
+    "githubRepoOwner": "",
+    "githubRepoBranch": ""
+  }
+
+}
