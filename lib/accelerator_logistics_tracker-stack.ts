@@ -2,7 +2,11 @@ import {CfnOutput, Stack, StackProps} from 'aws-cdk-lib';
 import {Construct} from 'constructs';
 import {DataSourceConstruct} from "./dataSourceConstruct";
 import {SageMakerConstruct} from "./sageMakerConstruct";
-import {CodePipelineConstruct, CodePipelineConstructPropsBase} from "./codePipelineConstruct";
+import {
+    CodePipelineConstruct,
+    CodePipelineConstructProps,
+    CodePipelineConstructPropsBase
+} from "./codePipelineConstruct";
 
 export type InfrastractureStackProps = CodePipelineConstructPropsBase & StackProps;
 
@@ -16,14 +20,8 @@ export class AcceleratorLogisticsTrackerStack extends Stack {
             dataBucket: dataSource.dataBucket,
         });
 
-        const codePipeline = new CodePipelineConstruct(this, 'CodePipeline', {
-            git: {
-                githubConnectionArn: "",
-                githubRepoName: "",
-                githubRepoOwner: ""
-            },
-            projectName: "",
-            repoType: undefined,
+        const codePipeline = new CodePipelineConstruct(this, 'CodePipeline', <CodePipelineConstructProps>{
+            ...props,
             dataManifestBucket: dataSource.dataManifestBucket,
             sageMakerArtifactBucket: sageMaker.sagemakerArtifactBucket,
             sageMakerExecutionRole: sageMaker.sagemakerExecutionRole
