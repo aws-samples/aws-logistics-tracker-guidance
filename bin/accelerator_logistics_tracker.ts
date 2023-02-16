@@ -16,6 +16,7 @@ const stackProps: InfrastractureStackProps = {
 new AcceleratorLogisticsTrackerStack(
     app,
     `AcceleratorLogisticsTrackerStack-${projectConfig.projectName}`,
-    stackProps
+    stackProps,
+    description: "Reference for logistics tracking ML model pipeline ('uksb-1tsflhnco')",
 );
 
